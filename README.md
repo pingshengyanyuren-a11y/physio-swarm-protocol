@@ -21,6 +21,8 @@ The runtime centers on:
 - SQLite-backed scheduling and persistence
 - distributed tissue execution
 - networked tissue execution across remote nodes
+- cluster registry, health checks, and failover
+- runnable tissue node server
 - reserve-cell promotion and recovery
 - workflow-stage execution through a lightweight DSL
 
@@ -92,6 +94,9 @@ This repository is now strong enough to express:
 - latent vector signaling
 - distributed tissue execution
 - network tissue execution across remote endpoints
+- cluster registry and healthy-endpoint resolution
+- node-level failover
+- runnable HTTP tissue node server
 - memory recall, trust curriculum, and immune hazard memory
 - reserve-cell substitution
 - quarantine and recovery

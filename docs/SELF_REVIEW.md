@@ -8,15 +8,16 @@
 - The demo proves nervous routing, endocrine contraction, and immune quarantine in one small workflow.
 - The runtime now includes reserve-cell promotion and a recovery pool instead of only hard quarantine.
 - The framework has a lightweight workflow DSL and organ registry, so it is no longer just a set of loose controllers.
-- The framework now has config-driven execution, real remote provider integration, tissue topology, adaptive and contrastive latent learning, continuous field decay and diffusion, hazard memory, distributed tissue execution, networked tissue execution, and durable SQLite persistence.
+- The framework now has config-driven execution, real remote provider integration, tissue topology, adaptive and contrastive latent learning, continuous field decay and diffusion, hazard memory, distributed tissue execution, networked tissue execution, cluster health resolution, and durable SQLite persistence.
 
 ## What Is Still Deliberately Minimal
 
 - No multi-provider retry and backoff policy yet
 - No long-term semantic graph beyond local SQLite memory and hazard recall
 - Learned embeddings are online and contrastive, but still not deep pretrained models yet
-- Network tissue execution works over remote nodes, but not yet with membership gossip or fault-tolerant cluster coordination
+- Network tissue execution works over remote nodes with health checks and failover, but not yet with membership gossip or fault-tolerant cluster coordination
 - Continuous field dynamics use numerical integration, but still not high-resolution differential fields
+- One intermittent Windows `ResourceWarning` still appears during strict test teardown around socket finalization
 
 ## Why This Is Ready To Publish
 
@@ -31,6 +32,7 @@ It is publishable as a framework seed because:
 - homeostasis now has regional consequences, not just global ones
 - latent representations now adapt from experience instead of staying fixed
 - tissue execution can now run in parallel worker processes and remote network nodes
+- remote node routing now has registry-backed health resolution and failover
 - the tests cover the key control loops
 
 It is publishable as a strong standalone skill and framework seed. It is still not a fully mature production orchestration platform, and the README does not claim that.
