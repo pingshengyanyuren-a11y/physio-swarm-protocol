@@ -28,11 +28,12 @@ The runtime is intentionally protocol-first, but now includes:
 
 - tissue topology and local neighborhood routing
 - real OpenAI-compatible remote provider adapters
-- adaptive latent learning
+- adaptive and contrastive latent learning
 - latent vector signaling, continuous regional diffusion, resonance, and similarity recall
 - durable memory recall, trust curriculum, and immune hazard patterns
 - regional circulation and homeostasis snapshots
 - process-based distributed tissue execution
+- remote network tissue execution
 - SQLite-backed scheduling and execution persistence
 - event persistence
 - reserve-cell promotion

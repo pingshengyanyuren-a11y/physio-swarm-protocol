@@ -4,7 +4,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 
 from .embeddings import cosine_similarity
-from .latent_model import AdaptiveLatentModel
+from .latent_model import AdaptiveLatentModel, ContrastiveLatentModel
 from .topology import TissueTopology
 
 
@@ -32,7 +32,7 @@ class SemanticVectorBus:
         self._subscriber_regions: dict[str, str] = {}
         self._region_fields: dict[str, list[float]] = {}
         self.topology = topology
-        self.latent_model = latent_model or AdaptiveLatentModel()
+        self.latent_model = latent_model or ContrastiveLatentModel()
         self.history: list[dict[str, object]] = []
 
     def subscribe(self, subscriber_id: str, channel: str = "latent", region: str = "core") -> None:
@@ -121,6 +121,13 @@ class SemanticVectorBus:
                 ]
             updated[region] = [value * (1.0 - diffusion) for value in updated[region]]
         self._region_fields = updated
+
+    def integrate(self, duration: float, dt: float = 0.1, diffusion: float = 0.15, decay: float = 0.96) -> None:
+        steps = max(1, int(round(duration / dt)))
+        per_step_decay = decay ** dt
+        per_step_diffusion = min(1.0, diffusion * dt)
+        for _ in range(steps):
+            self.tick(decay=per_step_decay, diffusion=per_step_diffusion)
 
     def field_strength(self, region: str) -> float:
         vector = self._region_fields.get(region)

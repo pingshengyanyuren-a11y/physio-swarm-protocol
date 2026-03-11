@@ -5,6 +5,7 @@ import sqlite3
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
+from urllib import request
 
 from .cells import ResearchCell
 from .runtime import PhysioSwarmRuntime
@@ -76,6 +77,51 @@ class DistributedTissueExecutor:
             "INSERT INTO distributed_runs (task_id, region, artifact) VALUES (?, ?, ?)",
             [(artifact["task_id"], artifact["region"], json.dumps(artifact)) for artifact in artifacts],
         )
+        self.connection.commit()
+        return artifacts
+
+    def close(self) -> None:
+        self.connection.close()
+
+
+class NetworkTissueExecutor:
+    def __init__(self, path: Path, timeout_seconds: float = 10.0) -> None:
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.connection = sqlite3.connect(self.path)
+        self.connection.row_factory = sqlite3.Row
+        self.timeout_seconds = timeout_seconds
+        self.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS network_runs (
+                run_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id TEXT NOT NULL,
+                region TEXT NOT NULL,
+                endpoint TEXT NOT NULL,
+                artifact TEXT NOT NULL
+            )
+            """
+        )
+        self.connection.commit()
+
+    def run_batch(self, tasks: list[TaskSignal], endpoints: dict[str, str]) -> list[dict[str, object]]:
+        artifacts: list[dict[str, object]] = []
+        for task in tasks:
+            endpoint = endpoints[task.region].rstrip("/") + "/execute"
+            body = json.dumps(asdict(task)).encode("utf-8")
+            http_request = request.Request(
+                endpoint,
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with request.urlopen(http_request, timeout=self.timeout_seconds) as response:
+                artifact = json.loads(response.read().decode("utf-8"))
+            artifacts.append(artifact)
+            self.connection.execute(
+                "INSERT INTO network_runs (task_id, region, endpoint, artifact) VALUES (?, ?, ?, ?)",
+                (task.task_id, task.region, endpoint, json.dumps(artifact)),
+            )
         self.connection.commit()
         return artifacts
 

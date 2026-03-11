@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .cells import BaseCell
 from .event_store import EventStore
-from .latent_model import AdaptiveLatentModel
+from .latent_model import AdaptiveLatentModel, ContrastiveLatentModel
 from .memory import MemoryGraph
 from .organs import CirculatorySystem, EndocrineSystem, ImmuneSystem, MetabolicSystem, NervousSystem
 from .signal_bus import SignalBus
@@ -41,7 +41,7 @@ class PhysioSwarmRuntime:
         self.topology = topology or TissueTopology()
         for cell in [*self.cells.values(), *self.reserve_cells.values()]:
             self.topology.place(cell.state.cell_id, cell.state.region)
-        self.latent_model = latent_model or AdaptiveLatentModel()
+        self.latent_model = latent_model or ContrastiveLatentModel()
         self.vector_bus = vector_bus or SemanticVectorBus(topology=self.topology, latent_model=self.latent_model)
         for cell_id in [*self.cells.keys(), *self.reserve_cells.keys()]:
             self.signal_bus.subscribe("endocrine", cell_id)
@@ -155,6 +155,8 @@ class PhysioSwarmRuntime:
             self.memory_graph.record_outcome(cell.state.cell_id, artifact.status, task=task)
         if self.vector_bus is not None:
             self.latent_model.observe(task.objective, label=task.region)
+            if isinstance(self.latent_model, ContrastiveLatentModel):
+                self.latent_model.observe_pair(task.objective, " ".join(notes) or task.objective, positive=True, context=task.region)
             recipients = self.vector_bus.broadcast(
                 VectorSignal(
                     channel="latent",
@@ -179,7 +181,7 @@ class PhysioSwarmRuntime:
             }
             self.signal_history.append(vector_record)
             self._record_event("signal", vector_record)
-            self.vector_bus.tick()
+            self.vector_bus.integrate(duration=1.0, dt=0.1)
         self._record_event("artifact", asdict(artifact))
         return artifact
 

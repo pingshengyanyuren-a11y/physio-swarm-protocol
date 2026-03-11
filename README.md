@@ -20,6 +20,7 @@ The runtime centers on:
 - durable memory, trust adaptation, and immune patterns
 - SQLite-backed scheduling and persistence
 - distributed tissue execution
+- networked tissue execution across remote nodes
 - reserve-cell promotion and recovery
 - workflow-stage execution through a lightweight DSL
 
@@ -82,6 +83,7 @@ This repository is now strong enough to express:
 - tissue topology and local adjacency
 - local latent propagation with resonance thresholds
 - adaptive latent learning
+- contrastive latent learning
 - continuous regional field dynamics
 - regional homeostasis and circulation snapshots
 - event persistence and replay
@@ -89,6 +91,7 @@ This repository is now strong enough to express:
 - durable task scheduling
 - latent vector signaling
 - distributed tissue execution
+- network tissue execution across remote endpoints
 - memory recall, trust curriculum, and immune hazard memory
 - reserve-cell substitution
 - quarantine and recovery

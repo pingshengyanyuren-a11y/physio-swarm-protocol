@@ -2,8 +2,8 @@ from .adapters import MockLLMAdapter, RemoteLLMAdapter
 from .cells import ReflexCell, ResearchCell
 from .cli import main
 from .config_runner import ConfigBundle, load_plan_from_toml, run_configured_workflow
-from .distributed import DistributedTissueExecutor
-from .latent_model import AdaptiveLatentModel
+from .distributed import DistributedTissueExecutor, NetworkTissueExecutor
+from .latent_model import AdaptiveLatentModel, ContrastiveLatentModel
 from .memory import MemoryGraph
 from .event_store import EventStore
 from .registry import OrganRegistry
@@ -18,11 +18,13 @@ __all__ = [
     "CellState",
     "ControlSignal",
     "ConfigBundle",
+    "ContrastiveLatentModel",
     "DistributedTissueExecutor",
     "EventStore",
     "ExecutionArtifact",
     "HomeostasisState",
     "AdaptiveLatentModel",
+    "NetworkTissueExecutor",
     "load_plan_from_toml",
     "main",
     "MemoryGraph",

@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import unittest
 
-from physioswarm.latent_model import AdaptiveLatentModel
+from physioswarm.latent_model import AdaptiveLatentModel, ContrastiveLatentModel
 from physioswarm.topology import TissueTopology
 from physioswarm.vector_bus import SemanticVectorBus, VectorSignal
 
 
 class VectorBusTest(unittest.TestCase):
     def test_vector_bus_broadcasts_and_recalls_nearest_messages(self) -> None:
-        bus = SemanticVectorBus()
+        bus = SemanticVectorBus(latent_model=AdaptiveLatentModel(dimensions=32))
         bus.subscribe("cortex")
         bus.broadcast(
             VectorSignal(
@@ -88,4 +88,26 @@ class VectorBusTest(unittest.TestCase):
         hippo_strength = bus.field_strength("hippocampus")
 
         self.assertLess(cortex_strength, initial)
+        self.assertGreater(hippo_strength, 0.0)
+
+    def test_vector_bus_integrates_continuous_field_over_small_steps(self) -> None:
+        topology = TissueTopology()
+        topology.connect("cortex", "hippocampus")
+        bus = SemanticVectorBus(topology=topology, latent_model=ContrastiveLatentModel(dimensions=32))
+        bus.subscribe("cortex-1", region="cortex")
+        bus.subscribe("hippo-1", region="hippocampus")
+        bus.broadcast(
+            VectorSignal(
+                channel="latent",
+                objective="evidence field pulse",
+                source="cortex-1",
+                region="cortex",
+            )
+        )
+
+        bus.integrate(duration=1.0, dt=0.1, diffusion=0.18, decay=0.97)
+        cortex_strength = bus.field_strength("cortex")
+        hippo_strength = bus.field_strength("hippocampus")
+
+        self.assertGreater(cortex_strength, hippo_strength)
         self.assertGreater(hippo_strength, 0.0)
