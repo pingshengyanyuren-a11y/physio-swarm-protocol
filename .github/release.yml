@@ -1,0 +1,13 @@
+changelog:
+  categories:
+    - title: Core protocol
+      labels:
+        - protocol
+        - runtime
+    - title: Skill and docs
+      labels:
+        - skill
+        - docs
+    - title: Other changes
+      labels:
+        - "*"

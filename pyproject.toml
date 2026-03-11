@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "physioswarm"
+version = "0.1.0"
+description = "A physiological multi-agent framework with endocrine, nervous, immune, and metabolic control."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Physio Swarm contributors"}]
+dependencies = []
+
+[project.scripts]
+physioswarm-demo = "physioswarm.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["physioswarm*"]
