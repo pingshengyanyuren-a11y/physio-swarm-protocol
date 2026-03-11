@@ -3,7 +3,8 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-from .embeddings import cosine_similarity, embed_text
+from .embeddings import cosine_similarity
+from .latent_model import AdaptiveLatentModel
 from .topology import TissueTopology
 
 
@@ -22,11 +23,16 @@ class VectorSignal:
 
 
 class SemanticVectorBus:
-    def __init__(self, topology: TissueTopology | None = None) -> None:
+    def __init__(
+        self,
+        topology: TissueTopology | None = None,
+        latent_model: AdaptiveLatentModel | None = None,
+    ) -> None:
         self._subscribers: dict[str, set[str]] = defaultdict(set)
         self._subscriber_regions: dict[str, str] = {}
         self._region_fields: dict[str, list[float]] = {}
         self.topology = topology
+        self.latent_model = latent_model or AdaptiveLatentModel()
         self.history: list[dict[str, object]] = []
 
     def subscribe(self, subscriber_id: str, channel: str = "latent", region: str = "core") -> None:
@@ -34,7 +40,7 @@ class SemanticVectorBus:
         self._subscriber_regions[subscriber_id] = region
 
     def broadcast(self, signal: VectorSignal) -> list[str]:
-        vector = signal.vector or embed_text(signal.objective)
+        vector = signal.vector or self.latent_model.encode(signal.objective)
         subscribers = sorted(self._subscribers.get(signal.channel, set()))
         if signal.target is not None:
             recipients = [subscriber for subscriber in subscribers if subscriber == signal.target]
@@ -75,7 +81,7 @@ class SemanticVectorBus:
         return recipients
 
     def recall(self, objective: str, limit: int = 3) -> list[dict[str, object]]:
-        query = embed_text(objective)
+        query = self.latent_model.encode(objective)
         matches: list[dict[str, object]] = []
         for record in self.history:
             score = cosine_similarity(query, list(record["vector"]))
@@ -92,6 +98,35 @@ class SemanticVectorBus:
             )
         matches.sort(key=lambda item: item["score"], reverse=True)
         return matches[:limit]
+
+    def tick(self, decay: float = 0.92, diffusion: float = 0.15) -> None:
+        decayed = {
+            region: [value * decay for value in vector]
+            for region, vector in self._region_fields.items()
+        }
+        if self.topology is None:
+            self._region_fields = decayed
+            return
+        updated = {region: list(vector) for region, vector in decayed.items()}
+        for region, vector in decayed.items():
+            neighbors = [neighbor for neighbor in self.topology.reachable_regions(region, hops=1) if neighbor != region]
+            if not neighbors:
+                continue
+            share = diffusion / len(neighbors)
+            for neighbor in neighbors:
+                target = updated.setdefault(neighbor, [0.0] * len(vector))
+                updated[neighbor] = [
+                    left + (right * share)
+                    for left, right in zip(target, vector)
+                ]
+            updated[region] = [value * (1.0 - diffusion) for value in updated[region]]
+        self._region_fields = updated
+
+    def field_strength(self, region: str) -> float:
+        vector = self._region_fields.get(region)
+        if vector is None:
+            return 0.0
+        return sum(abs(value) for value in vector)
 
     def _merge_region_field(self, region: str, vector: list[float], attenuation: float = 1.0) -> None:
         scaled = [value * attenuation for value in vector]

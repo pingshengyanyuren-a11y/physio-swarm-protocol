@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from physioswarm.latent_model import AdaptiveLatentModel
 from physioswarm.topology import TissueTopology
 from physioswarm.vector_bus import SemanticVectorBus, VectorSignal
 
@@ -64,3 +65,27 @@ class VectorBusTest(unittest.TestCase):
         self.assertIn("cortex-1", recipients)
         self.assertIn("hippo-1", recipients)
         self.assertNotIn("liver-1", recipients)
+
+    def test_vector_bus_diffuses_and_decays_continuous_region_fields(self) -> None:
+        topology = TissueTopology()
+        topology.connect("cortex", "hippocampus")
+        model = AdaptiveLatentModel(dimensions=32)
+        bus = SemanticVectorBus(topology=topology, latent_model=model)
+        bus.subscribe("cortex-1", region="cortex")
+        bus.subscribe("hippo-1", region="hippocampus")
+
+        bus.broadcast(
+            VectorSignal(
+                channel="latent",
+                objective="encode evidence memory",
+                source="cortex-1",
+                region="cortex",
+            )
+        )
+        initial = bus.field_strength("cortex")
+        bus.tick(decay=0.8, diffusion=0.25)
+        cortex_strength = bus.field_strength("cortex")
+        hippo_strength = bus.field_strength("hippocampus")
+
+        self.assertLess(cortex_strength, initial)
+        self.assertGreater(hippo_strength, 0.0)

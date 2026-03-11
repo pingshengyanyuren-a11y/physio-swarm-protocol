@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from physioswarm.cells import ReflexCell, ResearchCell
+from physioswarm.latent_model import AdaptiveLatentModel
 from physioswarm.memory import MemoryGraph
 from physioswarm.runtime import PhysioSwarmRuntime
 from physioswarm.topology import TissueTopology
@@ -131,6 +132,27 @@ class RuntimeTest(unittest.TestCase):
                 self.assertLess(regional["cortex"]["resource"], 1.0)
             finally:
                 runtime.close()
+
+    def test_runtime_uses_adaptive_latent_model_for_field_memory(self) -> None:
+        topology = TissueTopology()
+        topology.connect("cortex", "hippocampus")
+        runtime = PhysioSwarmRuntime(
+            cells=[ResearchCell("cortex-1", region="cortex"), ResearchCell("hippo-1", region="hippocampus")],
+            topology=topology,
+            latent_model=AdaptiveLatentModel(dimensions=32),
+        )
+
+        runtime.handle(
+            TaskSignal("latent-1", "evidence synthesis memory", urgency=0.5, noise=0.1, complexity=0.6, region="cortex")
+        )
+        runtime.handle(
+            TaskSignal("latent-2", "evidence drafting memory", urgency=0.5, noise=0.1, complexity=0.6, region="hippocampus")
+        )
+        matches = runtime.vector_bus.recall("evidence memory", limit=2)
+
+        self.assertEqual(len(matches), 2)
+        self.assertGreater(matches[0]["score"], 0.3)
+        runtime.close()
 
 
 if __name__ == "__main__":

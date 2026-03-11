@@ -15,8 +15,11 @@ The runtime centers on:
 - explicit signal buses and cell state
 - remote LLM provider adapters
 - vector-based latent communication with local resonance
+- adaptive latent learning
+- continuous field diffusion and decay
 - durable memory, trust adaptation, and immune patterns
 - SQLite-backed scheduling and persistence
+- distributed tissue execution
 - reserve-cell promotion and recovery
 - workflow-stage execution through a lightweight DSL
 
@@ -49,10 +52,12 @@ Then build a `RemoteLLMAdapter` directly or via `RemoteLLMAdapter.from_env()`.
 
 - `physioswarm/types.py`
 - `physioswarm/topology.py`
+- `physioswarm/latent_model.py`
 - `physioswarm/signal_bus.py`
 - `physioswarm/vector_bus.py`
 - `physioswarm/cells.py`
 - `physioswarm/adapters.py`
+- `physioswarm/distributed.py`
 - `physioswarm/memory.py`
 - `physioswarm/registry.py`
 - `physioswarm/organs.py`
@@ -76,11 +81,14 @@ This repository is now strong enough to express:
 - organ-level control
 - tissue topology and local adjacency
 - local latent propagation with resonance thresholds
+- adaptive latent learning
+- continuous regional field dynamics
 - regional homeostasis and circulation snapshots
 - event persistence and replay
 - networked provider execution
 - durable task scheduling
 - latent vector signaling
+- distributed tissue execution
 - memory recall, trust curriculum, and immune hazard memory
 - reserve-cell substitution
 - quarantine and recovery
