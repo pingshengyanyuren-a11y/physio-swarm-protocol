@@ -1,15 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from pathlib import Path
 
 from .cells import BaseCell
+from .event_store import EventStore
 from .organs import EndocrineSystem, ImmuneSystem, MetabolicSystem, NervousSystem
 from .signal_bus import SignalBus
 from .types import CellState, ControlSignal, ExecutionArtifact, HomeostasisState, TaskSignal
 
 
 class PhysioSwarmRuntime:
-    def __init__(self, cells: list[BaseCell], reserve_cells: list[BaseCell] | None = None) -> None:
+    def __init__(
+        self,
+        cells: list[BaseCell],
+        reserve_cells: list[BaseCell] | None = None,
+        event_log_path: Path | None = None,
+    ) -> None:
         self.cells = {cell.state.cell_id: cell for cell in cells}
         self.reserve_cells = {cell.state.cell_id: cell for cell in (reserve_cells or [])}
         self.state = HomeostasisState()
@@ -20,6 +27,7 @@ class PhysioSwarmRuntime:
         self.signal_bus = SignalBus()
         self.signal_history: list[dict[str, object]] = []
         self.recovery_pool: set[str] = set()
+        self.event_store = EventStore(event_log_path) if event_log_path is not None else None
         for cell_id in [*self.cells.keys(), *self.reserve_cells.keys()]:
             self.signal_bus.subscribe("endocrine", cell_id)
             self.signal_bus.subscribe("immune", cell_id)
@@ -34,6 +42,10 @@ class PhysioSwarmRuntime:
 
     def snapshot(self) -> dict[str, dict[str, float | bool | str | int]]:
         return {cell_id: asdict(cell.state) for cell_id, cell in self.cells.items()}
+
+    def _record_event(self, event_type: str, payload: dict[str, object]) -> None:
+        if self.event_store is not None:
+            self.event_store.append(event_type, payload)
 
     def _promote_reserve(self, organ: str) -> None:
         for cell_id, cell in list(self.reserve_cells.items()):
@@ -62,7 +74,9 @@ class PhysioSwarmRuntime:
         self.state = self.endocrine.regulate(self.state, task, active_load=mean_load)
         endocrine_signal = ControlSignal(channel="endocrine", payload={"stress": self.state.stress_level})
         endocrine_recipients = self.signal_bus.emit(endocrine_signal)
-        self.signal_history.append({"signal": asdict(endocrine_signal), "recipients": endocrine_recipients})
+        signal_record = {"signal": asdict(endocrine_signal), "recipients": endocrine_recipients}
+        self.signal_history.append(signal_record)
+        self._record_event("signal", signal_record)
 
         route, selected = self.nervous.route(task, {cell_id: cell.state for cell_id, cell in self.cells.items()})
         cell = self.cells[selected.cell_id]
@@ -74,7 +88,9 @@ class PhysioSwarmRuntime:
         if cell.state.quarantined:
             immune_signal = ControlSignal(channel="immune", payload={"quarantine": True}, target=cell.state.cell_id)
             immune_recipients = self.signal_bus.emit(immune_signal)
-            self.signal_history.append({"signal": asdict(immune_signal), "recipients": immune_recipients})
+            immune_record = {"signal": asdict(immune_signal), "recipients": immune_recipients}
+            self.signal_history.append(immune_record)
+            self._record_event("signal", immune_record)
             notes = [*notes, "immune quarantine triggered"]
             self._promote_reserve(cell.state.organ)
 
@@ -87,6 +103,7 @@ class PhysioSwarmRuntime:
             resource_budget=self.state.resource_budget,
             stress_level=self.state.stress_level,
         )
+        self._record_event("artifact", asdict(artifact))
         return artifact
 
     def run_plan(self, plan) -> dict[str, object]:
@@ -102,3 +119,8 @@ class PhysioSwarmRuntime:
             "signals": list(self.signal_history),
             "final_state": asdict(self.state),
         }
+
+    def replay_events(self) -> list[dict[str, object]]:
+        if self.event_store is None:
+            return []
+        return self.event_store.read_all()

@@ -21,6 +21,7 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -e .
 python .\examples\research_assistant_demo.py
+python .\scripts\run_workflow.py .\examples\workflows\research-assistant.toml
 python -m unittest discover -s .\tests -v
 ```
 
@@ -31,6 +32,7 @@ python -m unittest discover -s .\tests -v
 - `physioswarm/cells.py`
 - `physioswarm/registry.py`
 - `physioswarm/organs.py`
+- `physioswarm/config_runner.py`
 - `physioswarm/runtime.py`
 - `physioswarm/workflow.py`
 
@@ -48,6 +50,8 @@ This repository is now strong enough to express:
 
 - organ-level control
 - signal broadcasting
+- event persistence and replay
+- provider-style adapter injection
 - reserve-cell substitution
 - quarantine and recovery
 - stage-based workflow execution

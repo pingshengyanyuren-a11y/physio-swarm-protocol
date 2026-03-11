@@ -8,10 +8,11 @@
 - The demo proves nervous routing, endocrine contraction, and immune quarantine in one small workflow.
 - The runtime now includes reserve-cell promotion and a recovery pool instead of only hard quarantine.
 - The framework has a lightweight workflow DSL and organ registry, so it is no longer just a set of loose controllers.
+- The framework now has config-driven execution, provider-style adapter injection, and event replay.
 
 ## What Is Still Deliberately Minimal
 
-- No real LLM provider integration yet
+- No real networked LLM provider integration yet
 - No vector or latent-state communication
 - No long-horizon recovery memory or trust curriculum
 - No production-grade scheduler or persistence layer

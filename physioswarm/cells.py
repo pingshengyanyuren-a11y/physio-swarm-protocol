@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import replace
-
 from .adapters import BaseAdapter, ReflexAdapter, ResearchAdapter
 from .types import CellState, HomeostasisState, TaskSignal
 
@@ -17,16 +15,16 @@ class BaseCell:
 
 
 class ReflexCell(BaseCell):
-    def __init__(self, cell_id: str, reliability: float = 0.95) -> None:
+    def __init__(self, cell_id: str, reliability: float = 0.95, adapter: BaseAdapter | None = None) -> None:
         super().__init__(
             CellState(cell_id=cell_id, organ="reflex_arc", reliability=reliability, energy=0.92),
-            ReflexAdapter(),
+            adapter or ReflexAdapter(),
         )
 
 
 class ResearchCell(BaseCell):
-    def __init__(self, cell_id: str, reliability: float = 0.9) -> None:
+    def __init__(self, cell_id: str, reliability: float = 0.9, adapter: BaseAdapter | None = None) -> None:
         super().__init__(
             CellState(cell_id=cell_id, organ="cortex", reliability=reliability, energy=0.86),
-            ResearchAdapter(),
+            adapter or ResearchAdapter(),
         )

@@ -14,7 +14,15 @@ class SkillTest(unittest.TestCase):
 
     def test_skill_references_organs_and_runtime(self) -> None:
         content = SKILL_PATH.read_text(encoding="utf-8")
-        for token in ("endocrine", "metabolic", "nervous", "immune", "physioswarm/runtime.py"):
+        for token in (
+            "endocrine",
+            "metabolic",
+            "nervous",
+            "immune",
+            "physioswarm/runtime.py",
+            "config_runner",
+            "scripts/run_workflow.py",
+        ):
             self.assertIn(token, content)
 
 

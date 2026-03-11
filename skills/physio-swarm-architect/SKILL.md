@@ -32,9 +32,11 @@ Start from:
 - `physioswarm/signal_bus.py`
 - `physioswarm/registry.py`
 - `physioswarm/organs.py`
+- `physioswarm/config_runner.py`
 - `physioswarm/runtime.py`
 - `physioswarm/workflow.py`
 - `examples/research_assistant_demo.py`
+- `scripts/run_workflow.py`
 
 Read:
 
