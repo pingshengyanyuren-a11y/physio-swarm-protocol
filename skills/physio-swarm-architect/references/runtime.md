@@ -4,9 +4,13 @@ Key modules:
 
 - `physioswarm/types.py`
 - `physioswarm/signal_bus.py`
+- `physioswarm/vector_bus.py`
 - `physioswarm/cells.py`
+- `physioswarm/adapters.py`
+- `physioswarm/memory.py`
 - `physioswarm/registry.py`
 - `physioswarm/organs.py`
+- `physioswarm/scheduler.py`
 - `physioswarm/config_runner.py`
 - `physioswarm/runtime.py`
 - `physioswarm/workflow.py`
@@ -19,7 +23,10 @@ Example:
 
 The runtime is intentionally protocol-first, but now includes:
 
-- provider-style adapters
+- real OpenAI-compatible remote provider adapters
+- latent vector signaling and similarity recall
+- durable memory recall and trust curriculum
+- SQLite-backed scheduling and execution persistence
 - event persistence
 - reserve-cell promotion
 - recovery hooks

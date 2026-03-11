@@ -5,9 +5,11 @@ from pathlib import Path
 
 from .cells import BaseCell
 from .event_store import EventStore
+from .memory import MemoryGraph
 from .organs import EndocrineSystem, ImmuneSystem, MetabolicSystem, NervousSystem
 from .signal_bus import SignalBus
 from .types import CellState, ControlSignal, ExecutionArtifact, HomeostasisState, TaskSignal
+from .vector_bus import SemanticVectorBus, VectorSignal
 
 
 class PhysioSwarmRuntime:
@@ -16,6 +18,8 @@ class PhysioSwarmRuntime:
         cells: list[BaseCell],
         reserve_cells: list[BaseCell] | None = None,
         event_log_path: Path | None = None,
+        memory_graph: MemoryGraph | None = None,
+        vector_bus: SemanticVectorBus | None = None,
     ) -> None:
         self.cells = {cell.state.cell_id: cell for cell in cells}
         self.reserve_cells = {cell.state.cell_id: cell for cell in (reserve_cells or [])}
@@ -28,9 +32,13 @@ class PhysioSwarmRuntime:
         self.signal_history: list[dict[str, object]] = []
         self.recovery_pool: set[str] = set()
         self.event_store = EventStore(event_log_path) if event_log_path is not None else None
+        self.memory_graph = memory_graph
+        self.vector_bus = vector_bus
         for cell_id in [*self.cells.keys(), *self.reserve_cells.keys()]:
             self.signal_bus.subscribe("endocrine", cell_id)
             self.signal_bus.subscribe("immune", cell_id)
+            if self.vector_bus is not None:
+                self.vector_bus.subscribe(cell_id)
 
     def cell_state(self, cell_id: str) -> CellState:
         if cell_id in self.cells:
@@ -78,7 +86,17 @@ class PhysioSwarmRuntime:
         self.signal_history.append(signal_record)
         self._record_event("signal", signal_record)
 
-        route, selected = self.nervous.route(task, {cell_id: cell.state for cell_id, cell in self.cells.items()})
+        trust_scores = {}
+        if self.memory_graph is not None:
+            trust_scores = {
+                cell_id: self.memory_graph.trust_score(cell_id)
+                for cell_id in self.cells
+            }
+        route, selected = self.nervous.route(
+            task,
+            {cell_id: cell.state for cell_id, cell in self.cells.items()},
+            trust_scores=trust_scores,
+        )
         cell = self.cells[selected.cell_id]
         updated_state = self.metabolic.consume(cell.state, task)
         cell.state = updated_state
@@ -103,6 +121,30 @@ class PhysioSwarmRuntime:
             resource_budget=self.state.resource_budget,
             stress_level=self.state.stress_level,
         )
+        if self.memory_graph is not None:
+            self.memory_graph.store_interaction(task, artifact)
+            self.memory_graph.record_outcome(cell.state.cell_id, artifact.status)
+        if self.vector_bus is not None:
+            recipients = self.vector_bus.broadcast(
+                VectorSignal(
+                    channel="latent",
+                    objective=f"{task.objective} {' '.join(artifact.notes)}".strip(),
+                    source=cell.state.cell_id,
+                    task_id=task.task_id,
+                    metadata={"route": artifact.route, "status": artifact.status},
+                )
+            )
+            vector_record = {
+                "signal": {
+                    "channel": "latent",
+                    "source": cell.state.cell_id,
+                    "task_id": task.task_id,
+                    "objective": task.objective,
+                },
+                "recipients": recipients,
+            }
+            self.signal_history.append(vector_record)
+            self._record_event("signal", vector_record)
         self._record_event("artifact", asdict(artifact))
         return artifact
 
@@ -118,9 +160,14 @@ class PhysioSwarmRuntime:
             "artifacts": artifacts,
             "signals": list(self.signal_history),
             "final_state": asdict(self.state),
+            "memory": self.memory_graph.snapshot() if self.memory_graph is not None else {},
         }
 
     def replay_events(self) -> list[dict[str, object]]:
         if self.event_store is None:
             return []
         return self.event_store.read_all()
+
+    def close(self) -> None:
+        if self.memory_graph is not None:
+            self.memory_graph.close()

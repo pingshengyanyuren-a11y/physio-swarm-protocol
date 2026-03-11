@@ -11,6 +11,10 @@ The runtime centers on:
 - nervous fast-lane routing
 - immune quarantine
 - explicit signal buses and cell state
+- remote LLM provider adapters
+- vector-based latent communication
+- durable memory and trust adaptation
+- SQLite-backed scheduling and persistence
 - reserve-cell promotion and recovery
 - workflow-stage execution through a lightweight DSL
 
@@ -25,13 +29,31 @@ python .\scripts\run_workflow.py .\examples\workflows\research-assistant.toml
 python -m unittest discover -s .\tests -v
 ```
 
+## Remote Provider
+
+The framework now supports real remote provider execution through an OpenAI-compatible adapter surface.
+
+Set:
+
+```powershell
+$env:PHYSIOSWARM_LLM_BASE_URL="https://your-provider.example"
+$env:PHYSIOSWARM_LLM_API_KEY="..."
+$env:PHYSIOSWARM_LLM_MODEL="gpt-4.1-mini"
+```
+
+Then build a `RemoteLLMAdapter` directly or via `RemoteLLMAdapter.from_env()`.
+
 ## Core Modules
 
 - `physioswarm/types.py`
 - `physioswarm/signal_bus.py`
+- `physioswarm/vector_bus.py`
 - `physioswarm/cells.py`
+- `physioswarm/adapters.py`
+- `physioswarm/memory.py`
 - `physioswarm/registry.py`
 - `physioswarm/organs.py`
+- `physioswarm/scheduler.py`
 - `physioswarm/config_runner.py`
 - `physioswarm/runtime.py`
 - `physioswarm/workflow.py`
@@ -51,9 +73,12 @@ This repository is now strong enough to express:
 - organ-level control
 - signal broadcasting
 - event persistence and replay
-- provider-style adapter injection
+- networked provider execution
+- durable task scheduling
+- latent vector signaling
+- memory recall and trust curriculum
 - reserve-cell substitution
 - quarantine and recovery
 - stage-based workflow execution
 
-It still does not claim to be a production-ready agent platform or full LLM orchestration stack.
+It still does not claim to be a full production agent platform, but it is no longer limited to mock providers or transient in-memory control.

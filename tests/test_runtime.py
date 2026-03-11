@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 
 from physioswarm.cells import ReflexCell, ResearchCell
+from physioswarm.memory import MemoryGraph
 from physioswarm.runtime import PhysioSwarmRuntime
 from physioswarm.types import TaskSignal
+from physioswarm.vector_bus import SemanticVectorBus
 
 
 class RuntimeTest(unittest.TestCase):
@@ -49,6 +53,25 @@ class RuntimeTest(unittest.TestCase):
         channels = [event["signal"]["channel"] for event in runtime.signal_history]
         self.assertIn("endocrine", channels)
         self.assertIn("immune", channels)
+
+    def test_runtime_updates_memory_and_vector_history(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            memory = MemoryGraph(Path(temp_dir) / "memory.sqlite3")
+            vector_bus = SemanticVectorBus()
+            runtime = PhysioSwarmRuntime(
+                cells=[ResearchCell("cortex-1")],
+                memory_graph=memory,
+                vector_bus=vector_bus,
+            )
+
+            runtime.handle(TaskSignal("t-memory", "draft evidence synthesis", urgency=0.5, noise=0.1, complexity=0.7))
+
+            recalled = memory.recall("evidence", limit=1)
+            matches = vector_bus.recall("evidence drafting", limit=1)
+
+            self.assertEqual(recalled[0]["task_id"], "t-memory")
+            self.assertEqual(matches[0]["task_id"], "t-memory")
+            runtime.close()
 
 
 if __name__ == "__main__":

@@ -1,10 +1,14 @@
+from .adapters import MockLLMAdapter, RemoteLLMAdapter
 from .cells import ReflexCell, ResearchCell
 from .cli import main
 from .config_runner import ConfigBundle, load_plan_from_toml, run_configured_workflow
+from .memory import MemoryGraph
 from .event_store import EventStore
 from .registry import OrganRegistry
 from .runtime import PhysioSwarmRuntime
+from .scheduler import PersistentScheduler
 from .types import CellState, ControlSignal, ExecutionArtifact, HomeostasisState, TaskSignal
+from .vector_bus import SemanticVectorBus, VectorSignal
 from .workflow import WorkflowPlan, WorkflowStage
 
 __all__ = [
@@ -16,12 +20,18 @@ __all__ = [
     "HomeostasisState",
     "load_plan_from_toml",
     "main",
+    "MemoryGraph",
+    "MockLLMAdapter",
     "OrganRegistry",
+    "PersistentScheduler",
     "PhysioSwarmRuntime",
     "ReflexCell",
+    "RemoteLLMAdapter",
     "ResearchCell",
     "run_configured_workflow",
+    "SemanticVectorBus",
     "TaskSignal",
+    "VectorSignal",
     "WorkflowPlan",
     "WorkflowStage",
 ]

@@ -33,13 +33,27 @@ class MetabolicSystem:
 
 
 class NervousSystem:
-    def route(self, task: TaskSignal, cells: dict[str, CellState]) -> tuple[str, CellState]:
+    def route(
+        self,
+        task: TaskSignal,
+        cells: dict[str, CellState],
+        trust_scores: dict[str, float] | None = None,
+    ) -> tuple[str, CellState]:
         eligible = [cell for cell in cells.values() if not cell.quarantined]
+        trust_scores = trust_scores or {}
         if task.qualifies_for_fast_lane():
-            reflex = [cell for cell in eligible if cell.organ == "reflex_arc"]
+            reflex = sorted(
+                [cell for cell in eligible if cell.organ == "reflex_arc"],
+                key=lambda cell: trust_scores.get(cell.cell_id, cell.reliability),
+                reverse=True,
+            )
             if reflex:
                 return "fast_lane", reflex[0]
-        cortex = [cell for cell in eligible if cell.organ == "cortex"]
+        cortex = sorted(
+            [cell for cell in eligible if cell.organ == "cortex"],
+            key=lambda cell: trust_scores.get(cell.cell_id, cell.reliability),
+            reverse=True,
+        )
         if cortex:
             return "deliberative", cortex[0]
         return "fallback", eligible[0]

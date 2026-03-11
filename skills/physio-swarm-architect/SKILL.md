@@ -22,7 +22,9 @@ Treat the system as an organism with organs and cells.
 4. Route urgent low-noise tasks through nervous fast lanes.
 5. Let endocrine state contract or relax system budgets.
 6. Let immune logic quarantine repeated failures.
-7. Return structured artifacts rather than pure transcripts.
+7. Attach durable memory and trust adaptation rather than stateless retries.
+8. Add latent vector channels for non-linguistic coordination.
+9. Return structured artifacts rather than pure transcripts.
 
 ## Runtime
 
@@ -30,8 +32,12 @@ Start from:
 
 - `physioswarm/types.py`
 - `physioswarm/signal_bus.py`
+- `physioswarm/vector_bus.py`
+- `physioswarm/memory.py`
 - `physioswarm/registry.py`
 - `physioswarm/organs.py`
+- `physioswarm/adapters.py`
+- `physioswarm/scheduler.py`
 - `physioswarm/config_runner.py`
 - `physioswarm/runtime.py`
 - `physioswarm/workflow.py`
