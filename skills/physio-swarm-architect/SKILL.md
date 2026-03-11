@@ -30,8 +30,10 @@ Start from:
 
 - `physioswarm/types.py`
 - `physioswarm/signal_bus.py`
+- `physioswarm/registry.py`
 - `physioswarm/organs.py`
 - `physioswarm/runtime.py`
+- `physioswarm/workflow.py`
 - `examples/research_assistant_demo.py`
 
 Read:

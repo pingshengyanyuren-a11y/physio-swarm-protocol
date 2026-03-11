@@ -5,8 +5,10 @@ Key modules:
 - `physioswarm/types.py`
 - `physioswarm/signal_bus.py`
 - `physioswarm/cells.py`
+- `physioswarm/registry.py`
 - `physioswarm/organs.py`
 - `physioswarm/runtime.py`
+- `physioswarm/workflow.py`
 
 Example:
 
