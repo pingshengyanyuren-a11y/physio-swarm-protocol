@@ -23,6 +23,7 @@ class MemoryGraph:
                 task_id TEXT PRIMARY KEY,
                 objective TEXT NOT NULL,
                 summary TEXT NOT NULL,
+                region TEXT NOT NULL,
                 cell_id TEXT NOT NULL,
                 route TEXT NOT NULL,
                 status TEXT NOT NULL,
@@ -35,8 +36,21 @@ class MemoryGraph:
                 streak INTEGER NOT NULL,
                 last_status TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS immune_memory (
+                pattern_key TEXT PRIMARY KEY,
+                region TEXT NOT NULL,
+                pattern TEXT NOT NULL,
+                weight REAL NOT NULL,
+                embedding TEXT NOT NULL
+            );
             """
         )
+        columns = {
+            row["name"]
+            for row in self.connection.execute("PRAGMA table_info(interactions)").fetchall()
+        }
+        if "region" not in columns:
+            self.connection.execute("ALTER TABLE interactions ADD COLUMN region TEXT NOT NULL DEFAULT 'core'")
         self.connection.commit()
 
     def store_interaction(self, task: TaskSignal, artifact: ExecutionArtifact) -> None:
@@ -45,13 +59,14 @@ class MemoryGraph:
         self.connection.execute(
             """
             INSERT OR REPLACE INTO interactions
-            (task_id, objective, summary, cell_id, route, status, tags, embedding)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (task_id, objective, summary, region, cell_id, route, status, tags, embedding)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 task.task_id,
                 task.objective,
                 summary,
+                task.region,
                 artifact.cell_id,
                 artifact.route,
                 artifact.status,
@@ -64,7 +79,7 @@ class MemoryGraph:
     def recall(self, query: str, limit: int = 3) -> list[dict[str, object]]:
         rows = self.connection.execute(
             """
-            SELECT task_id, objective, summary, cell_id, route, status, tags, embedding
+            SELECT task_id, objective, summary, region, cell_id, route, status, tags, embedding
             FROM interactions
             """
         ).fetchall()
@@ -77,6 +92,7 @@ class MemoryGraph:
                     "task_id": row["task_id"],
                     "objective": row["objective"],
                     "summary": row["summary"],
+                    "region": row["region"],
                     "cell_id": row["cell_id"],
                     "route": row["route"],
                     "status": row["status"],
@@ -87,7 +103,7 @@ class MemoryGraph:
         scored.sort(key=lambda item: item["score"], reverse=True)
         return scored[:limit]
 
-    def record_outcome(self, cell_id: str, status: str) -> None:
+    def record_outcome(self, cell_id: str, status: str, task: TaskSignal | None = None) -> None:
         row = self.connection.execute(
             "SELECT score, streak, last_status FROM trust_scores WHERE cell_id = ?",
             (cell_id,),
@@ -115,6 +131,29 @@ class MemoryGraph:
             """,
             (cell_id, score, streak, status),
         )
+        if task is not None and status != "executed":
+            pattern_key = f"{task.region}:{task.objective}"
+            existing = self.connection.execute(
+                "SELECT weight FROM immune_memory WHERE pattern_key = ?",
+                (pattern_key,),
+            ).fetchone()
+            weight = clamp((float(existing["weight"]) if existing is not None else 0.0) + 0.2, 0.0, 1.0)
+            self.connection.execute(
+                """
+                INSERT INTO immune_memory (pattern_key, region, pattern, weight, embedding)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(pattern_key) DO UPDATE SET
+                    weight = excluded.weight,
+                    embedding = excluded.embedding
+                """,
+                (
+                    pattern_key,
+                    task.region,
+                    task.objective,
+                    weight,
+                    json.dumps(embed_text(task.objective)),
+                ),
+            )
         self.connection.commit()
 
     def trust_score(self, cell_id: str) -> float:
@@ -127,7 +166,26 @@ class MemoryGraph:
     def snapshot(self) -> dict[str, object]:
         interactions = self.connection.execute("SELECT COUNT(*) AS count FROM interactions").fetchone()
         trusts = self.connection.execute("SELECT COUNT(*) AS count FROM trust_scores").fetchone()
-        return {"interactions": int(interactions["count"]), "trust_profiles": int(trusts["count"])}
+        hazards = self.connection.execute("SELECT COUNT(*) AS count FROM immune_memory").fetchone()
+        return {
+            "interactions": int(interactions["count"]),
+            "trust_profiles": int(trusts["count"]),
+            "immune_patterns": int(hazards["count"]),
+        }
+
+    def hazard_level(self, query: str, region: str) -> float:
+        rows = self.connection.execute(
+            "SELECT weight, embedding FROM immune_memory WHERE region = ?",
+            (region,),
+        ).fetchall()
+        if not rows:
+            return 0.0
+        query_vector = embed_text(query)
+        scores = [
+            float(row["weight"]) * cosine_similarity(query_vector, json.loads(row["embedding"]))
+            for row in rows
+        ]
+        return max(scores, default=0.0)
 
     def close(self) -> None:
         self.connection.close()

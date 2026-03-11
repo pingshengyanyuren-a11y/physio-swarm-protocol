@@ -25,6 +25,8 @@ class TaskSignal:
     noise: float
     complexity: float
     tags: tuple[str, ...] = ()
+    region: str = "core"
+    propagation_hops: int = 1
 
     def qualifies_for_fast_lane(self) -> bool:
         return self.urgency >= 0.8 and self.noise <= 0.25 and self.complexity <= 0.35
@@ -42,6 +44,7 @@ class ControlSignal:
 class CellState:
     cell_id: str
     organ: str
+    region: str = "core"
     energy: float = 1.0
     load: float = 0.0
     reliability: float = 1.0
@@ -60,6 +63,7 @@ class ExecutionArtifact:
     cell_id: str
     route: str
     status: str
+    region: str = "core"
     notes: list[str] = field(default_factory=list)
     resource_budget: float = 1.0
     stress_level: float = 0.2

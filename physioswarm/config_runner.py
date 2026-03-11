@@ -19,8 +19,14 @@ class ConfigBundle:
 
 def _default_registry() -> OrganRegistry:
     registry = OrganRegistry()
-    registry.register("reflex_arc", lambda cell_id, reliability=0.95: ReflexCell(cell_id, reliability))
-    registry.register("cortex", lambda cell_id, reliability=0.9: ResearchCell(cell_id, reliability))
+    registry.register(
+        "reflex_arc",
+        lambda cell_id, reliability=0.95, region="core": ReflexCell(cell_id, reliability, region=region),
+    )
+    registry.register(
+        "cortex",
+        lambda cell_id, reliability=0.9, region="core": ResearchCell(cell_id, reliability, region=region),
+    )
     return registry
 
 

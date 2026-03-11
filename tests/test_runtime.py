@@ -7,6 +7,7 @@ from pathlib import Path
 from physioswarm.cells import ReflexCell, ResearchCell
 from physioswarm.memory import MemoryGraph
 from physioswarm.runtime import PhysioSwarmRuntime
+from physioswarm.topology import TissueTopology
 from physioswarm.types import TaskSignal
 from physioswarm.vector_bus import SemanticVectorBus
 
@@ -72,6 +73,64 @@ class RuntimeTest(unittest.TestCase):
             self.assertEqual(recalled[0]["task_id"], "t-memory")
             self.assertEqual(matches[0]["task_id"], "t-memory")
             runtime.close()
+
+    def test_runtime_prefers_local_tissue_cells_over_distant_cells(self) -> None:
+        topology = TissueTopology()
+        topology.connect("cortex", "hippocampus")
+        topology.place("cortex-distant", "liver")
+        topology.place("cortex-local", "cortex")
+        runtime = PhysioSwarmRuntime(
+            cells=[
+                ResearchCell("cortex-distant", region="liver"),
+                ResearchCell("cortex-local", region="cortex"),
+            ],
+            topology=topology,
+        )
+
+        artifact = runtime.handle(
+            TaskSignal("local-1", "draft local synthesis", urgency=0.5, noise=0.1, complexity=0.6, region="cortex")
+        )
+
+        self.assertEqual(artifact.cell_id, "cortex-local")
+
+    def test_runtime_builds_regional_homeostasis_from_hazard_memory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            memory = MemoryGraph(Path(temp_dir) / "memory.sqlite3")
+            topology = TissueTopology()
+            topology.place("cortex-1", "cortex")
+            runtime = PhysioSwarmRuntime(
+                cells=[ResearchCell("cortex-1", region="cortex", reliability=0.45)],
+                memory_graph=memory,
+                topology=topology,
+            )
+            try:
+                noisy = TaskSignal(
+                    "hazard-1",
+                    "repair recursive failure",
+                    urgency=0.5,
+                    noise=0.95,
+                    complexity=0.8,
+                    region="cortex",
+                )
+
+                runtime.handle(noisy)
+                runtime.handle(noisy)
+                runtime.handle(
+                    TaskSignal(
+                        "followup-1",
+                        "repair recursive failure again",
+                        urgency=0.45,
+                        noise=0.2,
+                        complexity=0.5,
+                        region="cortex",
+                    )
+                )
+                regional = runtime.region_snapshot()
+
+                self.assertGreater(regional["cortex"]["hazard_level"], 0.2)
+                self.assertLess(regional["cortex"]["resource"], 1.0)
+            finally:
+                runtime.close()
 
 
 if __name__ == "__main__":

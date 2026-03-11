@@ -15,16 +15,28 @@ class BaseCell:
 
 
 class ReflexCell(BaseCell):
-    def __init__(self, cell_id: str, reliability: float = 0.95, adapter: BaseAdapter | None = None) -> None:
+    def __init__(
+        self,
+        cell_id: str,
+        reliability: float = 0.95,
+        adapter: BaseAdapter | None = None,
+        region: str = "core",
+    ) -> None:
         super().__init__(
-            CellState(cell_id=cell_id, organ="reflex_arc", reliability=reliability, energy=0.92),
+            CellState(cell_id=cell_id, organ="reflex_arc", region=region, reliability=reliability, energy=0.92),
             adapter or ReflexAdapter(),
         )
 
 
 class ResearchCell(BaseCell):
-    def __init__(self, cell_id: str, reliability: float = 0.9, adapter: BaseAdapter | None = None) -> None:
+    def __init__(
+        self,
+        cell_id: str,
+        reliability: float = 0.9,
+        adapter: BaseAdapter | None = None,
+        region: str = "core",
+    ) -> None:
         super().__init__(
-            CellState(cell_id=cell_id, organ="cortex", reliability=reliability, energy=0.86),
+            CellState(cell_id=cell_id, organ="cortex", region=region, reliability=reliability, energy=0.86),
             adapter or ResearchAdapter(),
         )

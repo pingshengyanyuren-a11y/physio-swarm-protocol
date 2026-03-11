@@ -45,3 +45,19 @@ class MemoryGraphTest(unittest.TestCase):
 
         self.assertLess(lowered, 0.5)
         self.assertGreater(recovered, lowered)
+
+    def test_memory_graph_records_immune_hazard_patterns(self) -> None:
+        task = TaskSignal(
+            "hazard-1",
+            "repair recursive failure",
+            urgency=0.8,
+            noise=0.9,
+            complexity=0.7,
+            region="cortex",
+        )
+        self.memory.record_outcome("cortex-1", status="failed", task=task)
+        self.memory.record_outcome("cortex-1", status="failed", task=task)
+
+        hazard = self.memory.hazard_level("recursive repair failure", region="cortex")
+
+        self.assertGreater(hazard, 0.2)

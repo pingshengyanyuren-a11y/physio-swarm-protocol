@@ -6,8 +6,9 @@ from pathlib import Path
 from .cells import BaseCell
 from .event_store import EventStore
 from .memory import MemoryGraph
-from .organs import EndocrineSystem, ImmuneSystem, MetabolicSystem, NervousSystem
+from .organs import CirculatorySystem, EndocrineSystem, ImmuneSystem, MetabolicSystem, NervousSystem
 from .signal_bus import SignalBus
+from .topology import TissueTopology
 from .types import CellState, ControlSignal, ExecutionArtifact, HomeostasisState, TaskSignal
 from .vector_bus import SemanticVectorBus, VectorSignal
 
@@ -20,11 +21,13 @@ class PhysioSwarmRuntime:
         event_log_path: Path | None = None,
         memory_graph: MemoryGraph | None = None,
         vector_bus: SemanticVectorBus | None = None,
+        topology: TissueTopology | None = None,
     ) -> None:
         self.cells = {cell.state.cell_id: cell for cell in cells}
         self.reserve_cells = {cell.state.cell_id: cell for cell in (reserve_cells or [])}
         self.state = HomeostasisState()
         self.endocrine = EndocrineSystem()
+        self.circulation = CirculatorySystem()
         self.metabolic = MetabolicSystem()
         self.nervous = NervousSystem()
         self.immune = ImmuneSystem()
@@ -33,12 +36,15 @@ class PhysioSwarmRuntime:
         self.recovery_pool: set[str] = set()
         self.event_store = EventStore(event_log_path) if event_log_path is not None else None
         self.memory_graph = memory_graph
-        self.vector_bus = vector_bus
+        self.topology = topology or TissueTopology()
+        for cell in [*self.cells.values(), *self.reserve_cells.values()]:
+            self.topology.place(cell.state.cell_id, cell.state.region)
+        self.vector_bus = vector_bus or SemanticVectorBus(topology=self.topology)
         for cell_id in [*self.cells.keys(), *self.reserve_cells.keys()]:
             self.signal_bus.subscribe("endocrine", cell_id)
             self.signal_bus.subscribe("immune", cell_id)
             if self.vector_bus is not None:
-                self.vector_bus.subscribe(cell_id)
+                self.vector_bus.subscribe(cell_id, region=self.cell_state(cell_id).region)
 
     def cell_state(self, cell_id: str) -> CellState:
         if cell_id in self.cells:
@@ -78,7 +84,26 @@ class PhysioSwarmRuntime:
                 self.recovery_pool.add(cell_id)
 
     def handle(self, task: TaskSignal) -> ExecutionArtifact:
-        mean_load = sum(cell.state.load for cell in self.cells.values()) / max(len(self.cells), 1)
+        candidate_ids = self.topology.candidate_cells(task.region, hops=task.propagation_hops)
+        local_candidates = {
+            cell_id: cell.state
+            for cell_id, cell in self.cells.items()
+            if not candidate_ids or cell_id in candidate_ids
+        }
+        if not any(not cell.quarantined for cell in local_candidates.values()):
+            local_candidates = {cell_id: cell.state for cell_id, cell in self.cells.items()}
+        if not any(not cell.quarantined for cell in local_candidates.values()):
+            self.recover_quarantined_cells()
+            local_candidates = {
+                cell_id: cell.state
+                for cell_id, cell in self.cells.items()
+                if not candidate_ids or cell_id in candidate_ids
+            }
+            if not any(not cell.quarantined for cell in local_candidates.values()):
+                local_candidates = {cell_id: cell.state for cell_id, cell in self.cells.items()}
+        mean_load = sum(cell.load for cell in local_candidates.values()) / max(len(local_candidates), 1)
+        hazard_level = self.memory_graph.hazard_level(task.objective, task.region) if self.memory_graph is not None else 0.0
+        local_flow = self.circulation.perfuse(task.region, task, hazard_level=hazard_level, local_load=mean_load)
         self.state = self.endocrine.regulate(self.state, task, active_load=mean_load)
         endocrine_signal = ControlSignal(channel="endocrine", payload={"stress": self.state.stress_level})
         endocrine_recipients = self.signal_bus.emit(endocrine_signal)
@@ -94,7 +119,7 @@ class PhysioSwarmRuntime:
             }
         route, selected = self.nervous.route(
             task,
-            {cell_id: cell.state for cell_id, cell in self.cells.items()},
+            local_candidates,
             trust_scores=trust_scores,
         )
         cell = self.cells[selected.cell_id]
@@ -117,13 +142,14 @@ class PhysioSwarmRuntime:
             cell_id=cell.state.cell_id,
             route=route,
             status=status if not cell.state.quarantined else "quarantined",
+            region=task.region,
             notes=notes,
-            resource_budget=self.state.resource_budget,
-            stress_level=self.state.stress_level,
+            resource_budget=min(self.state.resource_budget, local_flow["resource"]),
+            stress_level=max(self.state.stress_level, local_flow["stress"]),
         )
         if self.memory_graph is not None:
             self.memory_graph.store_interaction(task, artifact)
-            self.memory_graph.record_outcome(cell.state.cell_id, artifact.status)
+            self.memory_graph.record_outcome(cell.state.cell_id, artifact.status, task=task)
         if self.vector_bus is not None:
             recipients = self.vector_bus.broadcast(
                 VectorSignal(
@@ -131,6 +157,9 @@ class PhysioSwarmRuntime:
                     objective=f"{task.objective} {' '.join(artifact.notes)}".strip(),
                     source=cell.state.cell_id,
                     task_id=task.task_id,
+                    region=task.region,
+                    hops=task.propagation_hops,
+                    activation_threshold=min(0.45, 0.12 + hazard_level),
                     metadata={"route": artifact.route, "status": artifact.status},
                 )
             )
@@ -140,6 +169,7 @@ class PhysioSwarmRuntime:
                     "source": cell.state.cell_id,
                     "task_id": task.task_id,
                     "objective": task.objective,
+                    "region": task.region,
                 },
                 "recipients": recipients,
             }
@@ -161,6 +191,7 @@ class PhysioSwarmRuntime:
             "signals": list(self.signal_history),
             "final_state": asdict(self.state),
             "memory": self.memory_graph.snapshot() if self.memory_graph is not None else {},
+            "regions": self.region_snapshot(),
         }
 
     def replay_events(self) -> list[dict[str, object]]:
@@ -171,3 +202,6 @@ class PhysioSwarmRuntime:
     def close(self) -> None:
         if self.memory_graph is not None:
             self.memory_graph.close()
+
+    def region_snapshot(self) -> dict[str, dict[str, float]]:
+        return self.circulation.snapshot()

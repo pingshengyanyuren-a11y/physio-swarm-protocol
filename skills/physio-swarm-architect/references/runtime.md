@@ -3,6 +3,7 @@
 Key modules:
 
 - `physioswarm/types.py`
+- `physioswarm/topology.py`
 - `physioswarm/signal_bus.py`
 - `physioswarm/vector_bus.py`
 - `physioswarm/cells.py`
@@ -23,9 +24,11 @@ Example:
 
 The runtime is intentionally protocol-first, but now includes:
 
+- tissue topology and local neighborhood routing
 - real OpenAI-compatible remote provider adapters
-- latent vector signaling and similarity recall
-- durable memory recall and trust curriculum
+- latent vector signaling, regional resonance, and similarity recall
+- durable memory recall, trust curriculum, and immune hazard patterns
+- regional circulation and homeostasis snapshots
 - SQLite-backed scheduling and execution persistence
 - event persistence
 - reserve-cell promotion

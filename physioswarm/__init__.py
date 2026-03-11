@@ -7,6 +7,7 @@ from .event_store import EventStore
 from .registry import OrganRegistry
 from .runtime import PhysioSwarmRuntime
 from .scheduler import PersistentScheduler
+from .topology import TissueTopology
 from .types import CellState, ControlSignal, ExecutionArtifact, HomeostasisState, TaskSignal
 from .vector_bus import SemanticVectorBus, VectorSignal
 from .workflow import WorkflowPlan, WorkflowStage
@@ -31,6 +32,7 @@ __all__ = [
     "run_configured_workflow",
     "SemanticVectorBus",
     "TaskSignal",
+    "TissueTopology",
     "VectorSignal",
     "WorkflowPlan",
     "WorkflowStage",

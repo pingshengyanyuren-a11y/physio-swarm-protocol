@@ -6,14 +6,16 @@ This repository does not model a software team. It models an organism.
 
 The runtime centers on:
 
+- topology-first tissue neighborhoods
 - endocrine global regulation
+- circulatory regional resource control
 - metabolic energy and load control
 - nervous fast-lane routing
-- immune quarantine
+- immune quarantine and hazard memory
 - explicit signal buses and cell state
 - remote LLM provider adapters
-- vector-based latent communication
-- durable memory and trust adaptation
+- vector-based latent communication with local resonance
+- durable memory, trust adaptation, and immune patterns
 - SQLite-backed scheduling and persistence
 - reserve-cell promotion and recovery
 - workflow-stage execution through a lightweight DSL
@@ -46,6 +48,7 @@ Then build a `RemoteLLMAdapter` directly or via `RemoteLLMAdapter.from_env()`.
 ## Core Modules
 
 - `physioswarm/types.py`
+- `physioswarm/topology.py`
 - `physioswarm/signal_bus.py`
 - `physioswarm/vector_bus.py`
 - `physioswarm/cells.py`
@@ -71,14 +74,16 @@ It is meant to guide future Codex sessions toward organism-style swarm design ra
 This repository is now strong enough to express:
 
 - organ-level control
-- signal broadcasting
+- tissue topology and local adjacency
+- local latent propagation with resonance thresholds
+- regional homeostasis and circulation snapshots
 - event persistence and replay
 - networked provider execution
 - durable task scheduling
 - latent vector signaling
-- memory recall and trust curriculum
+- memory recall, trust curriculum, and immune hazard memory
 - reserve-cell substitution
 - quarantine and recovery
 - stage-based workflow execution
 
-It still does not claim to be a full production agent platform, but it is no longer limited to mock providers or transient in-memory control.
+It still does not claim to be a full production agent platform, but it is no longer organized around flat global workers and transient control only.

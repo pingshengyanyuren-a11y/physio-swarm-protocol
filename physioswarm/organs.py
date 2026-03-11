@@ -24,6 +24,24 @@ class EndocrineSystem:
         )
 
 
+class CirculatorySystem:
+    def __init__(self) -> None:
+        self._regions: dict[str, dict[str, float]] = {}
+
+    def perfuse(self, region: str, task: TaskSignal, hazard_level: float, local_load: float) -> dict[str, float]:
+        current = self._regions.get(region, {"resource": 1.0, "stress": 0.2, "hazard_level": 0.0})
+        demand = (task.urgency * 0.28) + (task.complexity * 0.32) + (local_load * 0.2) + (hazard_level * 0.2)
+        resource = clamp(current["resource"] - (demand * 0.14) + 0.02)
+        stress = clamp(current["stress"] + (demand * 0.18))
+        hazard = clamp((current["hazard_level"] * 0.7) + (hazard_level * 0.6))
+        state = {"resource": resource, "stress": stress, "hazard_level": hazard}
+        self._regions[region] = state
+        return state
+
+    def snapshot(self) -> dict[str, dict[str, float]]:
+        return {region: dict(state) for region, state in self._regions.items()}
+
+
 class MetabolicSystem:
     def consume(self, cell: CellState, task: TaskSignal) -> CellState:
         energy = clamp(cell.energy - (0.05 + (task.complexity * 0.08)))
